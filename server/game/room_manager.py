@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Optional
 from fastapi import WebSocket
 
-from app.config import PIN_LENGTH, MAX_PLAYERS_PER_ROOM
+from core.config import PIN_LENGTH, MAX_PLAYERS_PER_ROOM
 
 class RoomState(str, Enum):
     LOBBY = "lobby"

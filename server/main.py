@@ -6,8 +6,10 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import HOST, PORT, CORS_ORIGINS
-from app.room_manager import room_manager
+from core.config import HOST, PORT, CORS_ORIGINS
+from routers.ws.host_ws import router as host_router
+from routers.ws.player_ws import router as player_router
+from server.game.room_manager import room_manager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,6 +30,9 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
+app.include_router(host_router)
+app.include_router(player_router)
 
 @app.get("/health")
 async def health():
