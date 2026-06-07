@@ -30,11 +30,15 @@ class ConnectionManager:
         data = payload.model_dump_json() if isinstance(payload, BaseModel) else json.dumps(payload)
         dead_ids = []
         for player_id, player in room.players.items():
+            if not player.is_alive or not player.websocket:
+                continue # Skip dead connections instead of popping them
             try:
                 await player.websocket.send_text(data)
             except Exception as e:
-                dead_ids.append(player_id)
-                logger.warning(f"Failed to send message to player {player_id} in room {room.pin}: {e}")
+                # makes more sense if we just mark player as diconnected instead of popping them
+                logger.warning(f"Failed to send message to player {player_id} in room {room.pin}: {e}, Player {player_id} socket dropped: {e}")
+                player.is_alive = False
+                player.websocket = None
         # Clean up dead connections
         for pid in dead_ids:
             logger.info(f"Cleaning up dead connection for player {pid} in room {room.pin}")

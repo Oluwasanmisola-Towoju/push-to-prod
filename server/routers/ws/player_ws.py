@@ -149,16 +149,17 @@ async def player_endpoint(websocket: WebSocket):
  
     except WebSocketDisconnect:
         if player and room:
-            removed = room_manager.remove_player(room, player.player_id)
-            if removed:
-                logger.info(f"Player {player.player_name} left room {room.pin}")
-                
-                await connection_manager.broadcast_to_room(
-                    room,
-                    PlayerLeftBroadcast(
-                        player_id=player.player_id,
-                        player_name=player.player_name,
-                        player_count=room.player_count(),
-                    )
+            # don't remove player. Just mark them as diconnected so they can reconnect
+            player.is_alive = False
+            player.websocket = None
+            logger.info(f"Player {player.player_name} temporarily disconnected from room {room.pin}")
+        
+            await connection_manager.broadcast_to_room(
+                room,
+                PlayerLeftBroadcast(
+                    player_id=player.player_id,
+                    player_name=player.player_name,
+                    player_count=sum(1 for p in room.player.values() if p.is_alive) # count only alive players
                 )
+            )
  

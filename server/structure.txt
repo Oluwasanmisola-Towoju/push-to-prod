@@ -1,0 +1,14 @@
+/server
+├── main.py                        # Application entry point
+├── requirements.txt        
+├── /core
+│   └── config.py                  # Access to Environment variables and constants
+├── /models
+│   └── messages.py                # Pydantic schemas to form data shapes
+├── /game
+│   ├── connection_manager.py      # Network and Socket transmission logic
+│   └── room_manager.py            # In-memory state storage for room
+└── /routers
+    └── /ws
+        ├── host_ws.py             # Controller for Host screen
+        └── player_ws.py           # Controller for Player devices
