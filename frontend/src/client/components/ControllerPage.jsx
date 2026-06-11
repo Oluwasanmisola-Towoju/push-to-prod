@@ -1,6 +1,7 @@
 import React, {useCallback, useRef } from 'react';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useGamepad } from '../hooks/useGamepad';
+import { useSwipe } from '../hooks/useSwipe'
 
 const BTN_SIZE = 80;
 const BTN_GAP = 8;
@@ -56,9 +57,10 @@ export default function ControllerPage({ playerName, roomPin, onAction }) {
     onAction(action)
   }, [onAction])
  
-  // initialize all hardware listeners
-  useKeyboard(sendAction, true)
-  useGamepad(sendAction, true)
+  // initialize all three hardware listeners
+  useKeyboard(sendAction, true);
+  useGamepad(sendAction, true);
+  useSwipe(sendAction, true);
  
   const gap = BTN_GAP
   const center = BTN_SIZE + gap
