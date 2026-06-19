@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ACTIONS } from "../../shared/inputNormalizer";
+import { ACTIONS } from "../utils/inputNormalizer";
 
 // listens for WASD or Arrow keys presses and fires an onAction callback
 
