@@ -91,6 +91,9 @@ export default function JoinPage({ onJoin, connectionStatus, error }) {
     disconnected: '#f85149',
   }[connectionStatus] || '#8b949e'
 
+  const canSubmit = 
+  pin.length === 4 && name.trim() && connectionStatus === 'connected'
+
   return (
     <div style={s.page}>
       <div style={s.logo}>$ push to prod</div>

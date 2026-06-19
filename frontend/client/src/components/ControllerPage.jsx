@@ -1,4 +1,4 @@
-import React, {useCallback, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useGamepad } from '../hooks/useGamepad';
 import { useSwipe } from '../hooks/useSwipe'
@@ -7,64 +7,64 @@ const BTN_SIZE = 80;
 const BTN_GAP = 8;
 
 function DPadButton({ label, action, onAction }) {
-    const pressedRef = useRef(false);
+  const pressedRef = useRef(false);
 
-    const handleStart = (e) => {
-        e.preventDefault();
-        if (!pressedRef.current) {
-            pressedRef.current = true;
-            onAction(action);
-        }
+  const handleStart = (e) => {
+    e.preventDefault();
+    if (!pressedRef.current) {
+      pressedRef.current = true;
+      onAction(action);
     }
+  }
 
-    const handleEnd = (e) => {
-        e.preventDefault()
-        pressedRef.current = false
-    }
+  const handleEnd = (e) => {
+    e.preventDefault()
+    pressedRef.current = false
+  }
 
-    return (
-        <button
-            style={{
-                width: BTN_SIZE,
-                height: BTN_SIZE,
-                background: '#21262d',
-                border: '2px solid #30363d',
-                borderRadius: '12px',
-                color: '#58a6ff',
-                fontSize: '28px',
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-                touchAction: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                WebkitTapHighlightColor: 'transparent',
-                transition: 'background 0.08s'
-            }}
-            onPointerDown={handleStart}
-            onPointerUp={handleEnd}
-            onPointerLeave={handleEnd}
-        >
-            {label}
-        </button>
-    )
+  return (
+    <button
+      style={{
+        width: BTN_SIZE,
+        height: BTN_SIZE,
+        background: '#21262d',
+        border: '2px solid #30363d',
+        borderRadius: '12px',
+        color: '#58a6ff',
+        fontSize: '28px',
+        fontFamily: 'inherit',
+        cursor: 'pointer',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        touchAction: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        WebkitTapHighlightColor: 'transparent',
+        transition: 'background 0.08s'
+      }}
+      onPointerDown={handleStart}
+      onPointerUp={handleEnd}
+      onPointerLeave={handleEnd}
+    >
+      {label}
+    </button>
+  )
 }
- 
+
 export default function ControllerPage({ playerName, roomPin, onAction }) {
   const sendAction = useCallback((action) => {
     onAction(action)
   }, [onAction])
- 
+
   // initialize all three hardware listeners
   useKeyboard(sendAction, true);
   useGamepad(sendAction, true);
   useSwipe(sendAction, true);
- 
+
   const gap = BTN_GAP
   const center = BTN_SIZE + gap
- 
+
   return (
     <div style={{
       height: '100%',
@@ -86,7 +86,7 @@ export default function ControllerPage({ playerName, roomPin, onAction }) {
           room {roomPin}
         </div>
       </div>
- 
+
       {/* D-Pad */}
       <div style={{
         position: 'relative',
@@ -121,7 +121,7 @@ export default function ControllerPage({ playerName, roomPin, onAction }) {
           <DPadButton label="▼" action="MOVE_DOWN" onAction={sendAction} />
         </div>
       </div>
- 
+
       {/* Footer hint */}
       <div style={{ color: '#8b949e', fontSize: '11px', textAlign: 'center' }}>
         Keyboard / Gamepad also works

@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { ACTIONS } from '../../shared/inputNormalizer';
+import { ACTIONS } from '../utils/inputNormalizer';
 
 // Minimum pixel distance required to register as a deliberate swipe rather than a tap
-const MIN_SWIPE_DISTANCE = 40; 
+const MIN_SWIPE_DISTANCE = 40;
 
 export function useSwipe(onAction, enabled = true) {
     // Store coordinates in a ref to prevent unnecessary re-renders during the swipe
@@ -14,7 +14,7 @@ export function useSwipe(onAction, enabled = true) {
         const handleTouchStart = (e) => {
             // Ignore multi-touch gestures lie pinch to zoom
             if (e.touches.length !== 1) return;
-            
+
             touchStartRef.current = {
                 x: e.touches[0].clientX,
                 y: e.touches[0].clientY
@@ -31,7 +31,7 @@ export function useSwipe(onAction, enabled = true) {
 
         const handleTouchEnd = (e) => {
             const { x: startX, y: startY } = touchStartRef.current;
-            
+
             if (startX === null || startY === null) return;
 
             // touchend uses changedTouches instead of touches
@@ -48,7 +48,7 @@ export function useSwipe(onAction, enabled = true) {
 
             // Enforce dead zone so as to abort if the swipe was too short
             if (Math.max(absDx, absDy) < MIN_SWIPE_DISTANCE) {
-                return; 
+                return;
             }
 
             // Determine dominant axis to prevent diagonal ambiguity
