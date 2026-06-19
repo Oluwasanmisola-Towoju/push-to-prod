@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ACTIONS } from "../../shared/inputNormalizer";
+import { ACTIONS } from "../utils/inputNormalizer";
 
 const DEAD_ZONE = 0.4;
 const POLL_MS = 50 // 20 polls/sec to match server tick rate

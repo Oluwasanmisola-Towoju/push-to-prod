@@ -121,10 +121,10 @@ export default function JoinPage({ onJoin, connectionStatus, error }) {
         <button
           style={{
             ...s.btn,
-            opacity: (pin.length === 4 && name.trim() && connectionStatus === 'connected') ? 1 : 0.5,
+            opacity: canSubmit ? 1 : 0.5,
           }}
           type="submit"
-          disabled={pin.length !== 4 || !name.trim() || connectionStatus !== 'connected'}
+          disabled={!canSubmit}
         >
           join game →
         </button>
