@@ -1,0 +1,17 @@
+/client
+├── package.json
+├── vite.config.js
+├── index.html
+└── /src
+    ├── main.jsx
+    ├── App.jsx
+    ├── /components
+    │   ├── ControllerPage.jsx
+    │   └── JoinPage.jsx
+    ├── /hooks
+    │   ├── useGamepad.js
+    │   ├── useKeyboard.js
+    │   ├── useSwipe.js
+    │   └── useWebSocket.js
+    └── /utils
+        └── inputNormalizer.js
