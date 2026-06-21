@@ -74,7 +74,10 @@ const s = {
 }
 
 export default function JoinPage({ onJoin, connectionStatus, error }) {
-  const [pin, setPin] = useState('')
+  const [pin, setPin] = useState(() => {  // automatically pull the pin from the URL if they scanned the QR code
+    const params = new URLSearchParams(window.location.search); 
+    return params.get('pin') || '';
+  });
   const [name, setName] = useState('')
 
   const handleSubmit = (e) => {
