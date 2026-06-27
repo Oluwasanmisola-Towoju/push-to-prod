@@ -13,6 +13,13 @@ PYBIND11_MODULE(gameengine, m) {
         .value("DEAD",  PlayerState::DEAD)
         .value("SAFE",  PlayerState::SAFE)
         .export_values();
+    
+    // ObstacleType enum binding
+    py::enum_<ObstacleType>(m, "ObstacleType")
+        .value("BUG", ObstacleType::BUG)
+        .value("MERGE_CONFLICT", ObstacleType::MERGE_CONFLICT)
+        .value("SCOPE_CREEP", ObstacleType::SCOPE_CREEP)
+        .value("SLACK_NOTIFICATION", ObstacleType::SLACK_NOTIFICATION)
 
     py::class_<Player>(m, "Player")
         .def_readonly("id",    &Player::id)
@@ -28,6 +35,7 @@ PYBIND11_MODULE(gameengine, m) {
 
     py::class_<Obstacle>(m, "Obstacle")
         .def_readonly("id",        &Obstacle::id)
+        .def_readonly("type",      &Obstacle::type)    //type binding for obstacle
         .def_readonly("bounds",    &Obstacle::bounds)
         .def_readonly("velocityX", &Obstacle::velocityX)
         .def_readonly("lane",      &Obstacle::lane);
@@ -43,8 +51,11 @@ PYBIND11_MODULE(gameengine, m) {
              py::arg("lane_count") = 10, py::arg("grid_width") = 12)
         .def("add_player",    &GameEngine::addPlayer)
         .def("remove_player", &GameEngine::removePlayer)
-        .def("apply_input",   &GameEngine::applyInput)
-        .def("tick",          &GameEngine::tick)
+        
+        // gil_scoped_release frees up the Python server to receive WebSockets inputs
+        .def("apply_input",   &GameEngine::applyInput, py::call_guard<py::gil_scoped_release>())
+        .def("tick",          &GameEngine::tick,       py::call_guard<py::gil_scoped_release>())
+        
         .def("player_count",  &GameEngine::playerCount)
         .def("is_game_over",  &GameEngine::isGameOver);
 }
