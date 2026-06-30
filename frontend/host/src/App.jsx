@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useHostSocket } from './hooks/useHostSocket.js'
 import LobbyPage         from './pages/LobbyPage.jsx'
 import GamePage          from './pages/GamePage.jsx'

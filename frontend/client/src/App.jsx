@@ -54,7 +54,7 @@ export default function App() {
     }
   }, [])
 
-  const { send, status } = useWebSocket(handleMessage)
+  const { send, status } = useWebSocket('/ws/player', handleMessage)
 
   // On reconnect: silently re-join the game with already stored player_id
   useEffect(() => {
