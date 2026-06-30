@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(ENGINE_SOURCES src/GameEngine.cpp)
 
+add_executable(engine_test ${ENGINE_SOURCES} tests/test_main.cpp)
+target_include_directories(engine_test PRIVATE src)
+
 
 option(BUILD_PYBIND "Build pybind11 Python extension" OFF)
 if(BUILD_PYBIND)
