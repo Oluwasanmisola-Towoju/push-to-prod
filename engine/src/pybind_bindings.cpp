@@ -19,7 +19,7 @@ PYBIND11_MODULE(gameengine, m) {
         .value("BUG", ObstacleType::BUG)
         .value("MERGE_CONFLICT", ObstacleType::MERGE_CONFLICT)
         .value("SCOPE_CREEP", ObstacleType::SCOPE_CREEP)
-        .value("SLACK_NOTIFICATION", ObstacleType::SLACK_NOTIFICATION)
+        .value("SLACK_NOTIFICATION", ObstacleType::SLACK_NOTIFICATION);
 
     py::class_<Player>(m, "Player")
         .def_readonly("id",    &Player::id)
