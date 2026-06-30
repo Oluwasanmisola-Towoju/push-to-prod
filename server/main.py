@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.config import HOST, PORT, CORS_ORIGINS
 from routers.ws.host_ws import router as host_router
 from routers.ws.player_ws import router as player_router
-from server.game.room_manager import room_manager
+from game.room_manager import room_manager
 
 logging.basicConfig(
     level=logging.INFO,

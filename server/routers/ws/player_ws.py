@@ -104,15 +104,16 @@ async def player_endpoint(websocket: WebSocket):
                         ),
                     )
  
-                    # Then broadcast to everyone (including the new player)
-                    await connection_manager.broadcast_to_room(
-                        room,
-                        PlayerJoinedBroadcast(
-                            player_id=player.player_id,
-                            player_name=player.player_name,
-                            player_count=room.player_count(),
-                        ),
-                    )
+                    # Then broadcast to only the Host Screen
+                    if room.host_websocket:
+                        await connection_manager.send(
+                            room.host_websocket,
+                            PlayerJoinedBroadcast(
+                                player_id=player.player_id,
+                                player_name=player.player_name,
+                                player_count=room.player_count(),
+                            ),
+                        )
                     continue  # Skip the generic ACK below
  
                 # ACK for reconnect path only
@@ -153,13 +154,14 @@ async def player_endpoint(websocket: WebSocket):
             player.is_alive = False
             player.websocket = None
             logger.info(f"Player {player.player_name} temporarily disconnected from room {room.pin}")
-        
-            await connection_manager.broadcast_to_room(
-                room,
-                PlayerLeftBroadcast(
-                    player_id=player.player_id,
-                    player_name=player.player_name,
-                    player_count=sum(1 for p in room.player.values() if p.is_alive) # count only alive players
+
+            # notify only the HOST if a player leaves
+            if room.host_websocket:
+                await connection_manager.send(
+                    room.host_websocket,
+                    PlayerLeftBroadcast(
+                        player_id=player.player_id,
+                        player_name=player.player_name,
+                        player_count=sum(1 for p in room.players.values() if p.is_alive) # count only alive players
+                    )
                 )
-            )
- 
