@@ -1,13 +1,21 @@
 from __future__ import annotations
-import random
-import string
-import uuid
+import random, uuid, string, sys, os
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Optional, Any
 from fastapi import WebSocket
 
 from core.config import PIN_LENGTH, MAX_PLAYERS_PER_ROOM
+
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+    import gameengine as _cpp  # type: ignore[import]
+    CppEngine = _cpp.GameEngine
+    print("[engine] C++ Game Engine loaded successfully.")
+except ImportError as _e:
+    CppEngine = None
+    print(f"[engine] WARNING: C++ Game Engine failed to load. ({_e})")
+    print("[engine]       Run: cmake --build engine/build --config Release")
 
 class RoomState(str, Enum):
     LOBBY = "lobby"
@@ -21,9 +29,8 @@ class Player:
     websocket: WebSocket
     is_alive: bool = True
     score: int = 0
-    # grid position for the player, initialized to (5, 0) for all players for simplicity to be used by C++ Game engine later on
-    x: float = 5.0
-    y: float = 0.0
+    x: float = 6.0  # center of grid
+    y: float = 0.0  # bottom row of grid 
 
 @dataclass
 class Room:
@@ -31,6 +38,7 @@ class Room:
     state: RoomState = RoomState.LOBBY
     players: dict[str, Player] = field(default_factory=dict)
     host_websocket: Optional[WebSocket] = None
+    engine: Optional[Any] = None
 
     def player_count(self) -> int:
         return len(self.players)
@@ -38,6 +46,15 @@ class Room:
     def is_full(self) -> bool:
         return self.player_count() >= MAX_PLAYERS_PER_ROOM
     
+    def start_engine(self) -> bool:
+        """ Instantiate a fresh C++ GameEngine for this room"""
+        if CppEngine is None:
+            return False
+        self.engine = CppEngine(10, 12)  # grid size 10x12
+        for pid, p in self.players.items():
+            self.engine.add_player(pid, p.player_name)
+        return True
+
     def to_player_list(self) -> list[dict]:
         return [
             {
@@ -87,10 +104,16 @@ class RoomManager:
             websocket=websocket
         )
         room.players[pid] = player
+        # if the game is already running, add them to the live engine too
+        if room.engine is not None:
+            room.engine.add_player(pid, player_name)
         return player
     
     def remove_player(self, room: Room, player_id: str) -> Optional[Player]:
-        return room.players.pop(player_id, None)
+        player = room.players.pop(player_id, None)
+        if player and room.engine is not None:
+            room.engine.remove_player(player_id)
+        return player
 
     def reconnect_player(
         self,
@@ -112,6 +135,9 @@ class RoomManager:
     
     def active_room_count(self) -> int:
         return len(self._rooms)
+    
+    def all_rooms(self) -> list[Room]:
+        return list(self._rooms.values())
     
     def active_player_count(self) -> int:
         return sum(room.player_count() for room in self._rooms.values())
