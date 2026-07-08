@@ -11,6 +11,7 @@ from routers.ws.host_ws import router as host_router
 from routers.ws.player_ws import router as player_router
 from game.room_manager import room_manager
 from game.tick_loop import game_tick_loop
+from contextlib import asynccontextmanager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,3 +49,10 @@ async def startup():
     logger.info(f"Starting Push to Prod server on {HOST}:{PORT}")  
     logger.info(f"CORS allowed origins: {CORS_ORIGINS}")
     asyncio.create_task(game_tick_loop())
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(game_tick_loop())  # on startup start the game tick loop
+    yield
+    task.cancel()                                 # on shutdown cancel the game tick loop
+app = FastAPI(lifespan=lifespan)

@@ -111,8 +111,10 @@ class RoomManager:
     
     def remove_player(self, room: Room, player_id: str) -> Optional[Player]:
         player = room.players.pop(player_id, None)
-        if player and room.engine is not None:
-            room.engine.remove_player(player_id)
+        if player:
+            player.is_alive = False # ensure state consistency upon removal
+            if room.engine is not None:
+                room.engine.remove_player(player_id)
         return player
 
     def reconnect_player(
