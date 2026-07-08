@@ -63,16 +63,14 @@ async def host_endpoint(websocket: WebSocket):
                     )
                     continue
 
-                # boot C++ engine instance 
+                # boot C++ engine instance
                 engine_ready = room.start_engine()
                 if not engine_ready:
-                    await connection_manager.send(
-                        websocket,
-                        ErrorPayload(
-                            code="ENGINE_NOT_READY",
-                            message="C++ engine not loaded"
-                        )
+                    logger.warning(
+                        "C++ engine not loaded for room %s; continuing with game start broadcast",
+                        room.pin,
                     )
+
                 room.state = RoomState.IN_GAME
                 await connection_manager.broadcast_to_room(
                     room,

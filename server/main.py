@@ -19,10 +19,21 @@ logging.basicConfig(
     )
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info(f"Starting Push to Prod server on {HOST}:{PORT}")
+    logger.info(f"CORS allowed origins: {CORS_ORIGINS}")
+    task = asyncio.create_task(game_tick_loop())
+    try:
+        yield
+    finally:
+        task.cancel()
+
 app = FastAPI(
     title="Push to Prod",
     description="Real-time multiplayer party game backend",
-    version="0.2.0"
+    version="0.2.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -43,16 +54,3 @@ async def health():
         "active_rooms": room_manager.active_room_count(),
         "active_players": room_manager.active_player_count()
     }
-
-@app.on_event("startup")
-async def startup():
-    logger.info(f"Starting Push to Prod server on {HOST}:{PORT}")  
-    logger.info(f"CORS allowed origins: {CORS_ORIGINS}")
-    asyncio.create_task(game_tick_loop())
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    task = asyncio.create_task(game_tick_loop())  # on startup start the game tick loop
-    yield
-    task.cancel()                                 # on shutdown cancel the game tick loop
-app = FastAPI(lifespan=lifespan)

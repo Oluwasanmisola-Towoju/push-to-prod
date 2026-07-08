@@ -119,10 +119,11 @@ async def player_endpoint(websocket: WebSocket):
                     player_name=player.player_name,
                     player_count=room.player_count(),
                 )
-                await connection_manager.broadcast_to_host(room, broadcast)
-                for pid, p in room.players.items():
-                    if pid != player.player_id:
-                        await connection_manager.send(p.websocket, broadcast)
+                await connection_manager.broadcast_to_room(
+                    room,
+                    broadcast,
+                    exclude_ws=websocket,  # The player who just joined will not get their own broadcast
+                )
  
             # Input during game
             elif msg_type == "PLAYER_INPUT":
