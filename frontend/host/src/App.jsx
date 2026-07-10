@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useHostSocket } from './hooks/useHostSocket.js'
-import LobbyPage         from './pages/LobbyPage.jsx'
-import GamePage          from './pages/GamePage.jsx'
+import LobbyPage from './pages/LobbyPage.jsx'
+import GamePage from './pages/GamePage.jsx'
 
 export default function App() {
-  const [pin,     setPin]     = useState(null)
+  const [pin, setPin] = useState(null)
   const [players, setPlayers] = useState([])
-  const [page,    setPage]    = useState('lobby')
+  const [page, setPage] = useState('lobby')
   const gameStateRef = useRef(null)
 
   const handleMessage = useCallback((payload) => {
@@ -20,7 +20,7 @@ export default function App() {
         setPlayers((prev) => {
           if (prev.find((p) => p.playerId === payload.player_id)) return prev
           return [...prev, {
-            playerId:   payload.player_id,
+            playerId: payload.player_id,
             playerName: payload.player_name,
           }]
         })
@@ -38,6 +38,16 @@ export default function App() {
 
       case 'GAME_STATE':
         gameStateRef.current = payload  // mutate a ref to handle physics data to prevent re-renders
+        break
+
+      case 'GAME_OVER':
+        // return to lobby after a short pause so players can see the result
+        setTimeout(() => {
+          gameStateRef.current = null
+          setPage('lobby')
+          setPlayers([])
+          setPin(null)
+        }, 4000)
         break
 
       case 'PONG':
@@ -62,8 +72,14 @@ export default function App() {
     send({ type: 'START_GAME', room_pin: pin })
   }, [send, pin])
 
-  if (page === 'game') {  // makes sense to pass the gameStateRef down so the Canvas can read the C++ coordinates
-    return <GamePage players={players} pin={pin} gameStateRef={gameStateRef} />
+  if (page === 'game') {
+    return (
+      <GamePage
+        pin={pin}
+        initialPlayers={players}
+        gameStateRef={gameStateRef}
+      />
+    )
   }
 
   return (

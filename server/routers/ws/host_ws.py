@@ -5,15 +5,13 @@ but it won't send player input messages like the player websockets do.
 """
 
 from __future__ import annotations
-import json
-import logging
+import json, logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from game.room_manager import room_manager, RoomState
 from game.connection_manager import connection_manager
 from models.messages import (
     RoomCreatedPayload,
-    PlayerJoinedBroadcast,
     ErrorPayload,
     PongPayload
 )
@@ -64,6 +62,15 @@ async def host_endpoint(websocket: WebSocket):
                         )
                     )
                     continue
+
+                # boot C++ engine instance
+                engine_ready = room.start_engine()
+                if not engine_ready:
+                    logger.warning(
+                        "C++ engine not loaded for room %s; continuing with game start broadcast",
+                        room.pin,
+                    )
+
                 room.state = RoomState.IN_GAME
                 await connection_manager.broadcast_to_room(
                     room,
@@ -72,22 +79,19 @@ async def host_endpoint(websocket: WebSocket):
                         "room_pin": room.pin
                     }
                 )
-                logger.info(f"Game started in room {room.pin}")
+                logger.info(
+                    f"Game started in room {room.pin} |  "
+                    f"{room.player_count()} player(s) | engine ready: {engine_ready}"
+                )
             
             elif msg_type == "PING":
                 await connection_manager.send(websocket, PongPayload())
-            
-            else:
-                logger.debug(f"Unknown host message type: {msg_type}")
     
     except WebSocketDisconnect:
-        logger.info(f"Host disconnected from room {room.pin if room else 'unknown'}")
-        if room: 
+        pin_str = room.pin if room else "unknown"
+        logger.info(f"Host disconnected from room {pin_str}")
+        if room:
             await connection_manager.broadcast_to_players(
-                room,
-                {
-                    "type": "HOST_DISCONNECTED",
-                    "message": "Host left the game"
-                }
+                room, {"type": "HOST_DISCONNECTED", "message": "Host left the game"}
             )
             room_manager.destroy_room(room.pin)
