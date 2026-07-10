@@ -33,6 +33,9 @@ export function useHostSocket(onMessage) {
         ws.onmessage = (e) => {
             try {
                 const payload = JSON.parse(e.data);
+                if (payload.type === 'GAME_STATE') {
+                    console.debug('[HOST WS] received GAME_STATE', payload.tick, payload.players?.length);
+                }
                 onMessageRef.current?.(payload);
             }
             catch {
@@ -43,7 +46,7 @@ export function useHostSocket(onMessage) {
         ws.onclose = () => {
             clearInterval(pingRef.current);
             setStatus(HostConnectionStatus.DISCONNECTED);
-        }        
+        }
 
         ws.onerror = (e) => {
             console.warn('[HOST WS] Error', e);

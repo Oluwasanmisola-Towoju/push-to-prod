@@ -2,7 +2,7 @@
 Push to Prod fastAPI backend, Run with: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 """
 
-import logging
+import asyncio, logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,6 +10,8 @@ from core.config import HOST, PORT, CORS_ORIGINS
 from routers.ws.host_ws import router as host_router
 from routers.ws.player_ws import router as player_router
 from game.room_manager import room_manager
+from game.tick_loop import game_tick_loop
+from contextlib import asynccontextmanager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,10 +19,21 @@ logging.basicConfig(
     )
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info(f"Starting Push to Prod server on {HOST}:{PORT}")
+    logger.info(f"CORS allowed origins: {CORS_ORIGINS}")
+    task = asyncio.create_task(game_tick_loop())
+    try:
+        yield
+    finally:
+        task.cancel()
+
 app = FastAPI(
     title="Push to Prod",
     description="Real-time multiplayer party game backend",
-    version="0.1.0"
+    version="0.2.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -41,8 +54,3 @@ async def health():
         "active_rooms": room_manager.active_room_count(),
         "active_players": room_manager.active_player_count()
     }
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info(f"Starting Push to Prod server on {HOST}:{PORT}")  
-    logger.info(f"CORS allowed origins: {CORS_ORIGINS}")
