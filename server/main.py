@@ -23,7 +23,17 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info(f"Starting Push to Prod server on {HOST}:{PORT}")
     logger.info(f"CORS allowed origins: {CORS_ORIGINS}")
-    task = asyncio.create_task(game_tick_loop())
+
+    async def _background_tick():
+        try:
+            await game_tick_loop()
+        except asyncio.CancelledError:
+            logger.info("[tick] background task cancelled")
+            raise
+        except Exception:
+            logger.exception("[tick] background task crashed")
+
+    task = asyncio.create_task(_background_tick())
     try:
         yield
     finally:
