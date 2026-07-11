@@ -1,7 +1,8 @@
-import { useEffect,  useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 // fallback to current hostname ensures it works dynamically on local LANs
-const WS_BASE = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:8000`
+const WS_SCHEME = window.location.protocol === 'https:' ? 'wss' : 'ws'
+const WS_BASE = import.meta.env.VITE_WS_URL || `${WS_SCHEME}://${window.location.hostname}:8000`
 const RECONNECT_BASE_MS = 1000
 const RECONNECT_MAX_MS = 16000
 const PING_INTERVAL_MS = 15000
@@ -13,11 +14,12 @@ export const ConnectionStatus = {
     RECONNECTING: 'reconnecting'
 }
 
-export function useWebSocket(endpoint = '/ws/player', onMessage) {
+export function useWebSocket(endpoint = 'ws/player', onMessage) {
     const wsRef = useRef(null);
     const reconnectAttemptRef = useRef(0);
     const reconnectTimerRef = useRef(null);
     const pingTimerRef = useRef(null);
+    const shouldReconnectRef = useRef(true);
     const onMessageRef = useRef(onMessage);
     const [status, setStatus] = useState(ConnectionStatus.DISCONNECTED)
 
@@ -28,7 +30,7 @@ export function useWebSocket(endpoint = '/ws/player', onMessage) {
         // don't open a seconnd socket if one is already open/connecting
         if (wsRef.current?.readyState === WebSocket.OPEN ||
             wsRef.current?.readyState === WebSocket.CONNECTING
-        ) return 
+        ) return
 
         setStatus(ConnectionStatus.CONNECTING);
         const ws = new WebSocket(`${WS_BASE}${endpoint}`);
@@ -37,6 +39,7 @@ export function useWebSocket(endpoint = '/ws/player', onMessage) {
         ws.onopen = () => {
             reconnectAttemptRef.current = 0;
             setStatus(ConnectionStatus.CONNECTED);
+            console.debug('[WS] connected', `${WS_BASE}${endpoint}`);
 
             // start keep-alive ping
             pingTimerRef.current = setInterval(() => {
@@ -58,8 +61,9 @@ export function useWebSocket(endpoint = '/ws/player', onMessage) {
 
         ws.onclose = () => {
             clearInterval(pingTimerRef.current);
-            setStatus(ConnectionStatus.RECONNECTING);
+            if (!shouldReconnectRef.current) return;
 
+            setStatus(ConnectionStatus.RECONNECTING);
             const delay = Math.min(
                 RECONNECT_BASE_MS * 2 ** reconnectAttemptRef.current,
                 RECONNECT_MAX_MS
@@ -70,6 +74,7 @@ export function useWebSocket(endpoint = '/ws/player', onMessage) {
         }
 
         ws.onerror = (err) => {
+            if (!shouldReconnectRef.current) return;
             console.warn('[WS] Error:', err);
             ws.close()
         }
@@ -80,19 +85,25 @@ export function useWebSocket(endpoint = '/ws/player', onMessage) {
             wsRef.current.send(JSON.stringify(payload));
             return true
         }
+        console.warn('[WS] send failed, socket is not open', payload, wsRef.current?.readyState)
         return false
     }, []);
 
     const disconnect = useCallback(() => {
+        shouldReconnectRef.current = false;
         clearTimeout(reconnectTimerRef.current);
         clearInterval(pingTimerRef.current);
         wsRef.current?.close();
+        wsRef.current = null;
         setStatus(ConnectionStatus.DISCONNECTED);
     }, []);
 
     useEffect(() => {
+        shouldReconnectRef.current = true;
         connect();
-        return disconnect
+        return () => {
+            disconnect();
+        }
     }, [connect, disconnect])
 
     return { send, status }

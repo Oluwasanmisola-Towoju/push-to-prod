@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useWebSocket, ConnectionStatus } from './hooks/useWebSocket.js'
-import { buildInputPayload }              from './utils/inputNormalizer.js'
-import JoinPage                           from './components/JoinPage.jsx'
-import ControllerPage                     from './components/ControllerPage.jsx'
+import { buildInputPayload } from './utils/inputNormalizer.js'
+import JoinPage from './components/JoinPage.jsx'
+import ControllerPage from './components/ControllerPage.jsx'
 
 const SESSION_KEY = 'ptp_player'
 
@@ -18,9 +18,9 @@ function clearSession() {
 }
 
 export default function App() {
-  const [player,    setPlayer]    = useState(null)
+  const [player, setPlayer] = useState(null)
   const [gameState, setGameState] = useState('lobby')
-  const [error,     setError]     = useState(null)
+  const [error, setError] = useState(null)
   const [pendingJoin, setPendingJoin] = useState(null)
 
   const handleMessage = useCallback((payload) => {
@@ -28,9 +28,9 @@ export default function App() {
     switch (payload.type) {
       case 'JOIN_ACK': {
         const session = {
-          playerId:   payload.player_id,
+          playerId: payload.player_id,
           playerName: payload.player_name,
-          roomPin:    payload.room_pin,
+          roomPin: payload.room_pin,
         }
         setPlayer(session)
         saveSession(session)
@@ -62,10 +62,10 @@ export default function App() {
     const session = loadSession()
     if (session && !player) {
       send({
-        type:        'JOIN_ROOM',
-        room_pin:    session.roomPin,
+        type: 'JOIN_ROOM',
+        room_pin: session.roomPin,
         player_name: session.playerName,
-        player_id:   session.playerId,
+        player_id: session.playerId,
       })
     }
     if (pendingJoin) send(pendingJoin)
@@ -79,7 +79,12 @@ export default function App() {
 
   const handleAction = useCallback((action) => {
     if (!player) return
-    send(buildInputPayload(player.playerId, action))
+    const payload = buildInputPayload(player.playerId, action)
+    console.debug('[Frontend] send action', action, payload)
+    const ok = send(payload)
+    if (!ok) {
+      console.warn('[Frontend] WebSocket not open, action dropped', action, payload)
+    }
   }, [send, player])
 
   // Render 

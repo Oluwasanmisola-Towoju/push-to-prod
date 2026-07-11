@@ -24,6 +24,7 @@ function DPadButton({ label, action, onAction }) {
 
   return (
     <button
+      type="button"
       style={{
         width: BTN_SIZE,
         height: BTN_SIZE,
@@ -46,6 +47,8 @@ function DPadButton({ label, action, onAction }) {
       onPointerDown={handleStart}
       onPointerUp={handleEnd}
       onPointerLeave={handleEnd}
+      onPointerCancel={handleEnd}
+      onClick={() => onAction(action)}
     >
       {label}
     </button>
