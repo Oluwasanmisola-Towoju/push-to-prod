@@ -1,5 +1,5 @@
 """
-Phase 1 Integration Tests — 21 assertions across 7 test cases.
+Phase 1 Integration Tests — 24 assertions across 8 test cases.
 Run: python3 tests/integration_test.py
 """
 import asyncio, json, threading, time, sys, os
@@ -67,6 +67,24 @@ async def test_game_start():
             h = await recv(host); p = await recv(player)
             record("Host gets GAME_STARTED",   h["type"] == "GAME_STARTED")
             record("Player gets GAME_STARTED", p["type"] == "GAME_STARTED")
+
+
+async def test_game_state():
+    print("\nTest 4 — Host GAME_STATE broadcast")
+    async with websockets.connect(f"{BASE}/ws/host") as host:
+        await host.send(json.dumps({"type":"CREATE_ROOM"}))
+        pin = (await recv(host))["room_pin"]
+        async with websockets.connect(f"{BASE}/ws/player") as player:
+            await player.send(json.dumps({"type":"JOIN_ROOM","room_pin":pin,"player_name":"Eve"}))
+            await recv(player)
+            await recv(host)
+            await host.send(json.dumps({"type":"START_GAME","room_pin":pin}))
+            await recv(host)
+            await recv(player)
+            game_state = await recv(host)
+            record("Host gets GAME_STATE", game_state["type"] == "GAME_STATE")
+            record("GAME_STATE has tick", isinstance(game_state.get("tick"), int))
+            record("GAME_STATE has players list", isinstance(game_state.get("players"), list))
 
 
 async def test_player_input():

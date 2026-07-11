@@ -1,90 +1,135 @@
 #!/bin/bash
-# Exit immediately if any command or test exits with a non-zero status
-set -e 
+set -e
 
 echo "====================================================="
 echo "  Push to Prod — Test & Launch Pipeline              "
 echo "====================================================="
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ---------------------------------------------------------
 # 1. Compile C++ Engine and Run Unit Tests
 # ---------------------------------------------------------
 echo -e "\n---> [1/4] Building C++ Engine & Executing Tests..."
-cd engine
+cd "$ROOT/engine"
 mkdir -p build
 cd build
 
-# Configure CMake
 cmake -DBUILD_PYBIND=ON ..
-
-# replaced 'make' with CMake's cross-platform build command.
-# '--config Release' to optimize the C++ physics engine for performance.
 cmake --build . --config Release
 
 echo -e "\n---> Running C++ Physics Tests..."
 ./Release/engine_test.exe
 
-cd ../..
+cd "$ROOT"
 
 # ---------------------------------------------------------
-# 2. Python Virtual Environment Setup
+# 2. Verify .pyd landed in the right place
 # ---------------------------------------------------------
-echo -e "\n---> [2/4] Setting up Python Virtual Environment..."
-if [ ! -d "venv" ]; then
-    echo "Creating new virtual environment..."
-    python -m venv venv 
+echo -e "\n---> Checking pybind11 extension output..."
+LIB_DIR="$ROOT/server/lib"
+mkdir -p "$LIB_DIR"
+
+PYD_COUNT=$(find "$LIB_DIR" -name "gameengine*.pyd" -o -name "gameengine*.so" 2>/dev/null | wc -l)
+
+if [ "$PYD_COUNT" -eq 0 ]; then
+    echo "WARNING: gameengine extension not found in server/lib/"
+    echo "         Searching engine/build/ for misplaced output..."
+    MISPLACED=$(find "$ROOT/engine/build" -name "gameengine*.pyd" -o -name "gameengine*.so" 2>/dev/null | head -1)
+    if [ -n "$MISPLACED" ]; then
+        echo "         Found at: $MISPLACED"
+        echo "         Copying to server/lib/ ..."
+        cp "$MISPLACED" "$LIB_DIR/"
+        echo "         Copied."
+    else
+        echo "ERROR: gameengine extension not found anywhere. Build may have failed."
+        exit 1
+    fi
+else
+    echo "         gameengine extension found in server/lib/ ✓"
 fi
 
-# cross-platform virtual environment activation
+# ---------------------------------------------------------
+# 3. Python Virtual Environment Setup
+# ---------------------------------------------------------
+echo -e "\n---> [2/4] Setting up Python Virtual Environment..."
+cd "$ROOT"
+
+if [ ! -d "venv" ]; then
+    echo "Creating new virtual environment..."
+    python -m venv venv
+fi
+
 if [ -f "venv/Scripts/activate" ]; then
-    # Windows Git Bash path
     source venv/Scripts/activate
 else
-    # Linux/macOS path
     source venv/bin/activate
 fi
 
-# Install dependencies from the server folder
 pip install -r server/requirements.txt
 
 # ---------------------------------------------------------
-# 3. Python Integration Tests
+# 4. Verify the engine imports correctly from Python
+# ---------------------------------------------------------
+echo -e "\n---> Verifying C++ engine import..."
+cd "$ROOT/server"
+
+python - << 'PYEOF'
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath('.')), 'server', 'lib'))
+sys.path.insert(0, 'lib')
+try:
+    import gameengine
+    e = gameengine.GameEngine(10, 12)
+    e.add_player('test', 'TestPlayer')
+    e.apply_input('test', 'MOVE_UP')
+    s = e.tick(0.05)
+    assert s.tick == 1
+    assert len(s.players) == 1
+    assert s.players[0].y == 1.0
+    print("         C++ engine import: OK ✓")
+    print(f"         tick={s.tick}, player y={s.players[0].y}")
+except ImportError as ex:
+    print(f"         WARNING: C++ engine not available: {ex}")
+    print("         Server will start but START_GAME will return ENGINE_NOT_READY")
+PYEOF
+
+cd "$ROOT"
+
+# ---------------------------------------------------------
+# 5. Python Integration Tests
 # ---------------------------------------------------------
 echo -e "\n---> [3/4] Running Python Integration Tests..."
 python tests/integration_test.py
 
 # ---------------------------------------------------------
-# 4. Spin Up All Services
+# 6. Spin Up All Services
 # ---------------------------------------------------------
 echo -e "\n---> [4/4] All tests passed! Spinning up dev servers..."
 
 cleanup() {
     echo -e "\n\n---> Shutting down all Push to Prod services..."
-    # kill all background processes started by this script
     kill $(jobs -p) 2>/dev/null
     exit
 }
 trap cleanup EXIT INT
 
-# Start FastAPI Backend
 echo "Starting FastAPI Backend..."
-cd server
+cd "$ROOT/server"
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
-cd ..
+cd "$ROOT"
 
-# Start Client Frontend
 echo "Starting Client Frontend..."
-cd frontend/client
+cd "$ROOT/frontend/client"
 npm install --silent
 npm run dev &
-cd ../..
+cd "$ROOT"
 
-# Start Host Frontend
 echo "Starting Host Frontend..."
-cd frontend/host
+cd "$ROOT/frontend/host"
 npm install --silent
 npm run dev &
-cd ../..
+cd "$ROOT"
 
 echo -e "\n====================================================="
 echo "  All services are running successfully!               "

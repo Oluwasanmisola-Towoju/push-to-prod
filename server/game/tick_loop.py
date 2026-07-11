@@ -63,7 +63,7 @@ async def game_tick_loop() -> None:
     Ticks every IN_GAME room at TICK_RATE_HZ
     """
     logger.info(f"[tick] Game loop started at {TICK_RATE_HZ}Hz"
-                f"({TICK_INTERVAL*1000:0.f}ms per tick)")
+                f" ({TICK_INTERVAL*1000:.0f}ms per tick)")
     last_time = time.monotonic()
 
     while True:
@@ -73,10 +73,14 @@ async def game_tick_loop() -> None:
         delta_time   = float(now - last_time)
         last_time    = now
 
-        for room in room_manager.all_rooms():
+        rooms = room_manager.all_rooms()
+        logger.debug(f"[tick] iteration - checking {len(rooms)} room(s)")
+        for room in rooms:
+            logger.debug(f"[tick] room {room.pin} state={room.state} engine={room.engine is not None}")
             if room.state != RoomState.IN_GAME:
                 continue
             if room.engine is None:
+                logger.warning(f"[tick] skipping room {room.pin} because engine is None")
                 continue
 
             try:
@@ -84,6 +88,7 @@ async def game_tick_loop() -> None:
                 _sync_python_state(room, cpp_state)
                 payload = _serialize_state(cpp_state)
 
+                logger.debug(f"[tick] broadcasting GAME_STATE for room {room.pin} tick={payload['tick']}")
                 await connection_manager.broadcast_to_host(room, payload)
 
                 if cpp_state.game_over:
@@ -96,6 +101,5 @@ async def game_tick_loop() -> None:
                         }
                     )
                     logger.info(f"[tick] Game Over - room {room.pin}")
-            
             except Exception as exc:
                 logger.error(f"[tick] Error in room {room.pin}: {exc}", exc_info=True)

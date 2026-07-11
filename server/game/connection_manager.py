@@ -44,6 +44,8 @@ class ConnectionManager:
     async def broadcast_to_host(self, room: Room, payload: BaseModel | dict, exclude_ws: WebSocket = None) -> None:
         """Broadcast a message to the host of a room, optionally excluding a socket."""
         if room.host_websocket and room.host_websocket != exclude_ws:
+            payload_type = payload.model_dump().get('type') if isinstance(payload, BaseModel) else payload.get('type')
+            logger.debug(f"[broadcast_to_host] room={room.pin} type={payload_type} host_ws={bool(room.host_websocket)}")
             data = payload.model_dump_json() if isinstance(payload, BaseModel) else json.dumps(payload)
             try:
                 await room.host_websocket.send_text(data)
