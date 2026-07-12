@@ -102,9 +102,6 @@ export default function GamePage({ pin, initialPlayers, gameStateRef }) {
       const state = gameStateRef.current
 
       if (state) {
-        if (window.__HOST_GAME_STATE_DEBUG) {
-          console.debug('[Host] rendering GAME_STATE', state.tick, state.players?.length)
-        }
         // Obstacles 
         for (const obs of state.obstacles) {
           // Determine type from obstacle id suffix (obs_00000 → index 0)

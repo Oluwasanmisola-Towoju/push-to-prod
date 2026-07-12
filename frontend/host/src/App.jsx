@@ -33,12 +33,10 @@ export default function App() {
         break
 
       case 'GAME_STARTED':
-        console.debug('[Host App] received GAME_STARTED')
         setPage('game')
         break
 
       case 'GAME_STATE':
-        console.debug('[Host App] received GAME_STATE', payload.tick, payload.players?.length)
         gameStateRef.current = payload  // mutate a ref to handle physics data to prevent re-renders
         break
 

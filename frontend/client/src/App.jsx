@@ -80,7 +80,6 @@ export default function App() {
   const handleAction = useCallback((action) => {
     if (!player) return
     const payload = buildInputPayload(player.playerId, action)
-    console.debug('[Frontend] send action', action, payload)
     const ok = send(payload)
     if (!ok) {
       console.warn('[Frontend] WebSocket not open, action dropped', action, payload)

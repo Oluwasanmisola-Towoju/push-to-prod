@@ -39,7 +39,6 @@ export function useWebSocket(endpoint = 'ws/player', onMessage) {
         ws.onopen = () => {
             reconnectAttemptRef.current = 0;
             setStatus(ConnectionStatus.CONNECTED);
-            console.debug('[WS] connected', `${WS_BASE}${endpoint}`);
 
             // start keep-alive ping
             pingTimerRef.current = setInterval(() => {
@@ -69,7 +68,6 @@ export function useWebSocket(endpoint = 'ws/player', onMessage) {
                 RECONNECT_MAX_MS
             );
             reconnectAttemptRef.current++;
-            console.log(`[WS] Reconnecting in ${delay}ms (attempt ${reconnectAttemptRef.current})`);
             reconnectTimerRef.current = setTimeout(connect, delay);
         }
 

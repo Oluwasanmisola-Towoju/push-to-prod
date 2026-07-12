@@ -74,9 +74,7 @@ async def game_tick_loop() -> None:
         last_time    = now
 
         rooms = room_manager.all_rooms()
-        logger.debug(f"[tick] iteration - checking {len(rooms)} room(s)")
         for room in rooms:
-            logger.debug(f"[tick] room {room.pin} state={room.state} engine={room.engine is not None}")
             if room.state != RoomState.IN_GAME:
                 continue
             if room.engine is None:
@@ -88,7 +86,6 @@ async def game_tick_loop() -> None:
                 _sync_python_state(room, cpp_state)
                 payload = _serialize_state(cpp_state)
 
-                logger.debug(f"[tick] broadcasting GAME_STATE for room {room.pin} tick={payload['tick']}")
                 await connection_manager.broadcast_to_host(room, payload)
 
                 if cpp_state.game_over:

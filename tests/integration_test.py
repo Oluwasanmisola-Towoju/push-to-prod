@@ -142,6 +142,7 @@ async def run_all():
     await test_room_creation()
     await test_player_join()
     await test_game_start()
+    await test_game_state()
     await test_player_input()
     await test_heartbeat()
     await test_disconnect()

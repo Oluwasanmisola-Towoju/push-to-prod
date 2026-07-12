@@ -33,7 +33,6 @@ export function useHostSocket(onMessage) {
 
             ws.onopen = () => {
                 setStatus(HostConnectionStatus.CONNECTED);
-                console.debug('[HOST WS] connected', `${WS_BASE}/ws/host`);
                 pingRef.current = setInterval(() => {
                     if (ws.readyState === WebSocket.OPEN) {
                         ws.send(JSON.stringify({ type: 'PING' }));
@@ -44,9 +43,6 @@ export function useHostSocket(onMessage) {
             ws.onmessage = (e) => {
                 try {
                     const payload = JSON.parse(e.data);
-                    if (payload.type === 'GAME_STATE') {
-                        console.debug('[HOST WS] received GAME_STATE', payload.tick, payload.players?.length);
-                    }
                     onMessageRef.current?.(payload);
                 }
                 catch {
