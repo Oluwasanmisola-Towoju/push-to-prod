@@ -3,8 +3,9 @@ import { useKeyboard } from '../hooks/useKeyboard';
 import { useGamepad } from '../hooks/useGamepad';
 import { useSwipe } from '../hooks/useSwipe'
 
-const BTN_SIZE = 80;
-const BTN_GAP = 8;
+const BTN_SIZE = 88;
+const BTN_GAP = 10;
+const CTR = BTN_GAP + BTN_SIZE
 
 function DPadButton({ label, action, onAction }) {
   const pressedRef = useRef(false);
@@ -30,9 +31,9 @@ function DPadButton({ label, action, onAction }) {
         height: BTN_SIZE,
         background: '#21262d',
         border: '2px solid #30363d',
-        borderRadius: '12px',
+        borderRadius: '14px',
         color: '#58a6ff',
-        fontSize: '28px',
+        fontSize: '26px',
         fontFamily: 'inherit',
         cursor: 'pointer',
         userSelect: 'none',
@@ -42,28 +43,29 @@ function DPadButton({ label, action, onAction }) {
         alignItems: 'center',
         justifyContent: 'center',
         WebkitTapHighlightColor: 'transparent',
-        transition: 'background 0.08s'
+        transition: 'background 0.08s',
       }}
       onPointerDown={handleStart}
       onPointerUp={handleEnd}
       onPointerLeave={handleEnd}
       onPointerCancel={handleEnd}
-      onClick={() => onAction(action)}
     >
       {label}
     </button>
   )
 }
 
-export default function ControllerPage({ playerName, roomPin, onAction }) {
+export default function ControllerPage({ playerName, roomPin, onAction, playerStatus }) {
+  const isAlive = playerStatus?.isAlive !== false
+  const score = playerStatus?.score ?? 0
+
   const sendAction = useCallback((action) => {
     onAction(action)
   }, [onAction])
 
-  // initialize all three hardware listeners
-  useKeyboard(sendAction, true);
-  useGamepad(sendAction, true);
-  useSwipe(sendAction, true);
+  useKeyboard(sendAction, isAlive)
+  useGamepad(sendAction, isAlive)
+  useSwipe(sendAction, isAlive)
 
   const gap = BTN_GAP
   const center = BTN_SIZE + gap
@@ -75,59 +77,116 @@ export default function ControllerPage({ playerName, roomPin, onAction }) {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '20px 16px',
+      padding: '24px 16px 20px',
+      userSelect: 'none',
     }}>
-      {/* Header */}
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ color: '#3fb950', fontSize: '14px', fontWeight: 600 }}>
-          ● in game
+
+      <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{
+          color: isAlive ? '#3fb950' : '#f85149',
+          fontSize: '14px',
+          fontWeight: 600,
+          transition: 'color 0.3s',
+        }}>
+          {isAlive ? '● in game' : '✕ eliminated'}
         </div>
-        <div style={{ color: '#58a6ff', fontSize: '18px', marginTop: '4px' }}>
+
+        <div style={{ color: '#58a6ff', fontSize: '20px', fontWeight: 700 }}>
           {playerName}
         </div>
-        <div style={{ color: '#8b949e', fontSize: '12px', marginTop: '2px' }}>
+
+        <div style={{ color: '#8b949e', fontSize: '12px' }}>
           room {roomPin}
         </div>
+
+        {score > 0 && (
+          <div style={{
+            marginTop: '4px',
+            background: '#161b22',
+            border: '1px solid #30363d',
+            borderRadius: '20px',
+            padding: '4px 14px',
+            color: '#58a6ff',
+            fontSize: '13px',
+            fontWeight: 600,
+          }}>
+            ×{score} deploys
+          </div>
+        )}
       </div>
 
-      {/* D-Pad */}
-      <div style={{
-        position: 'relative',
-        width: BTN_SIZE * 3 + gap * 2,
-        height: BTN_SIZE * 3 + gap * 2,
-      }}>
-        {/* Up */}
-        <div style={{ position: 'absolute', top: 0, left: center }}>
-          <DPadButton label="▲" action="MOVE_UP" onAction={sendAction} />
-        </div>
-        {/* Left */}
-        <div style={{ position: 'absolute', top: center, left: 0 }}>
-          <DPadButton label="◀" action="MOVE_LEFT" onAction={sendAction} />
-        </div>
-        {/* Center */}
+      {isAlive ? (
         <div style={{
-          position: 'absolute',
-          top: center,
-          left: center,
-          width: BTN_SIZE,
-          height: BTN_SIZE,
-          background: '#0d1117',
-          borderRadius: '50%',
-          border: '2px solid #21262d',
-        }} />
-        {/* Right */}
-        <div style={{ position: 'absolute', top: center, left: center * 2 }}>
-          <DPadButton label="▶" action="MOVE_RIGHT" onAction={sendAction} />
+          position: 'relative',
+          width: BTN_SIZE * 3 + gap * 2,
+          height: BTN_SIZE * 3 + gap * 2,
+        }}>
+          <div style={{ position: 'absolute', top: 0, left: CTR }}>
+            <DPadButton label="▲" action="MOVE_UP" onAction={sendAction} />
+          </div>
+          <div style={{ position: 'absolute', top: CTR, left: 0 }}>
+            <DPadButton label="◀" action="MOVE_LEFT" onAction={sendAction} />
+          </div>
+          <div style={{
+            position: 'absolute',
+            top: CTR,
+            left: CTR,
+            width: BTN_SIZE,
+            height: BTN_SIZE,
+            background: '#0d1117',
+            borderRadius: '50%',
+            border: '2px solid #21262d',
+          }} />
+          <div style={{ position: 'absolute', top: CTR, left: CTR * 2 }}>
+            <DPadButton label="▶" action="MOVE_RIGHT" onAction={sendAction} />
+          </div>
+          <div style={{ position: 'absolute', top: CTR * 2, left: CTR }}>
+            <DPadButton label="▼" action="MOVE_DOWN" onAction={sendAction} />
+          </div>
         </div>
-        {/* Down */}
-        <div style={{ position: 'absolute', top: center * 2, left: center }}>
-          <DPadButton label="▼" action="MOVE_DOWN" onAction={sendAction} />
+      ) : (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '32px',
+        }}>
+          <div style={{
+            fontSize: '64px',
+            lineHeight: 1,
+            filter: 'grayscale(1)',
+          }}>
+            💀
+          </div>
+          <div style={{
+            color: '#f85149',
+            fontSize: '22px',
+            fontWeight: 700,
+          }}>
+            you got pushed
+          </div>
+          <div style={{ color: '#8b949e', fontSize: '13px', textAlign: 'center' }}>
+            watch the host screen
+          </div>
+          {score > 0 && (
+            <div style={{
+              color: '#58a6ff',
+              fontSize: '16px',
+              fontWeight: 600,
+            }}>
+              final score: ×{score}
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Footer hint */}
-      <div style={{ color: '#8b949e', fontSize: '11px', textAlign: 'center' }}>
-        Keyboard / Gamepad also works
+      <div style={{
+        color: '#484f58',
+        fontSize: '11px',
+        textAlign: 'center',
+      }}>
+        {isAlive ? 'swipe · tap · keyboard · gamepad' : ''}
       </div>
     </div>
   )

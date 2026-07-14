@@ -20,6 +20,7 @@ function clearSession() {
 export default function App() {
   const [player, setPlayer] = useState(null)
   const [gameState, setGameState] = useState('lobby')
+  const [playerStatus, setPlayerStatus] = useState(null)
   const [error, setError] = useState(null)
   const [pendingJoin, setPendingJoin] = useState(null)
 
@@ -33,6 +34,7 @@ export default function App() {
           roomPin: payload.room_pin,
         }
         setPlayer(session)
+        setPlayerStatus(null)
         saveSession(session)
         setPendingJoin(null)
         break
@@ -40,9 +42,18 @@ export default function App() {
       case 'GAME_STARTED':
         setGameState('in_game')
         break
+      case 'GAME_STATE': {
+        if (!player) break
+        const currentPlayer = payload.players?.find(
+          (entry) => entry.player_id === player.playerId,
+        )
+        setPlayerStatus(currentPlayer || null)
+        break
+      }
       case 'HOST_DISCONNECTED':
         setGameState('lobby')
         setPlayer(null)
+        setPlayerStatus(null)
         clearSession()
         setError('The host ended the game.')
         break
@@ -52,7 +63,7 @@ export default function App() {
       default:
         break
     }
-  }, [])
+  }, [player])
 
   const { send, status } = useWebSocket('/ws/player', handleMessage)
 
@@ -93,6 +104,7 @@ export default function App() {
         playerName={player.playerName}
         roomPin={player.roomPin}
         onAction={handleAction}
+        playerStatus={playerStatus}
       />
     )
   }

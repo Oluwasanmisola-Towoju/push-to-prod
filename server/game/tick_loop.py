@@ -87,6 +87,9 @@ async def game_tick_loop() -> None:
                 payload = _serialize_state(cpp_state)
 
                 await connection_manager.broadcast_to_host(room, payload)
+                for player in room.players.values():
+                    if player.websocket:
+                        await connection_manager.send(player.websocket, payload)
 
                 if cpp_state.game_over:
                     room.state = RoomState.FINISHED
