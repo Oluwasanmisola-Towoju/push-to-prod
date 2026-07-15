@@ -111,7 +111,7 @@ export default function JoinPage({ onJoin, connectionStatus, error }) {
           placeholder="PIN"
           value={pin}
           onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-          autoFocus
+          autoFocus={!pin}  // don't steal focus if PIN already filled
         />
         <input
           style={{ ...s.input, ...s.nameInput }}
@@ -120,6 +120,7 @@ export default function JoinPage({ onJoin, connectionStatus, error }) {
           placeholder="your name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          autoFocus={!!pin}  // focus name field if PIN was pre-filled
         />
         <button
           style={{
@@ -135,7 +136,7 @@ export default function JoinPage({ onJoin, connectionStatus, error }) {
 
       {error && <div style={s.error}>{error}</div>}
 
-      <div style={{ ...s.status, color: statusColor }}>
+      <div style={{ ...s.status, fontSize: '12px', color: statusColor }}>
         ● {connectionStatus}
       </div>
     </div>
