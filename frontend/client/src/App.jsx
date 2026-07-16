@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useWebSocket, ConnectionStatus } from './hooks/useWebSocket.js'
 import { buildInputPayload } from './utils/inputNormalizer.js'
 import JoinPage from './components/JoinPage.jsx'
@@ -20,12 +20,15 @@ function clearSession() {
 export default function App() {
   const [player, setPlayer] = useState(null)
   const [gameState, setGameState] = useState('lobby')
-  const [playerStatus, setPlayerStatus] = useState(null)
   const [error, setError] = useState(null)
   const [pendingJoin, setPendingJoin] = useState(null)
+  const [playerStatus, setPlayerStatus] = useState({ isAlive: true, score: 0 })
+  const playerRef = useRef(null)
+  const gameOverTimerRef = useRef(null)
 
   const handleMessage = useCallback((payload) => {
     setError(null)
+
     switch (payload.type) {
       case 'JOIN_ACK': {
         const session = {
@@ -34,38 +37,66 @@ export default function App() {
           roomPin: payload.room_pin,
         }
         setPlayer(session)
-        setPlayerStatus(null)
+        playerRef.current = session
         saveSession(session)
         setPendingJoin(null)
+        setPlayerStatus({ isAlive: true, score: 0 })
         break
       }
+
       case 'GAME_STARTED':
         setGameState('in_game')
+        setPlayerStatus({ isAlive: true, score: 0 })
         break
+
       case 'GAME_STATE': {
-        if (!player) break
         const currentPlayer = payload.players?.find(
-          (entry) => entry.player_id === player.playerId,
+          (entry) => entry.player_id === playerRef.current?.playerId,
         )
-        setPlayerStatus(currentPlayer || null)
+        if (currentPlayer) {
+          setPlayerStatus({
+            isAlive: currentPlayer.is_alive,
+            score: currentPlayer.score,
+          })
+        }
         break
       }
+
+      case 'GAME_OVER':
+        clearTimeout(gameOverTimerRef.current)
+        gameOverTimerRef.current = setTimeout(() => {
+          setGameState('lobby')
+          setPlayerStatus({ isAlive: true, score: 0 })
+        }, 4000)
+        break
+
       case 'HOST_DISCONNECTED':
         setGameState('lobby')
         setPlayer(null)
+        playerRef.current = null
         setPlayerStatus(null)
         clearSession()
+        setPendingJoin(null)
         setError('The host ended the game.')
         break
+
       case 'ERROR':
         setError(payload.message)
         break
+
+      case 'PONG':
+        break
+
       default:
         break
     }
-  }, [player])
+  }, [])
 
   const { send, status } = useWebSocket('/ws/player', handleMessage)
+
+  useEffect(() => () => {
+    clearTimeout(gameOverTimerRef.current)
+  }, [])
 
   // On reconnect: silently re-join the game with already stored player_id
   useEffect(() => {
@@ -80,7 +111,7 @@ export default function App() {
       })
     }
     if (pendingJoin) send(pendingJoin)
-  }, [status]) // eslint-disable-line
+  }, [status, player, pendingJoin, send])
 
   const handleJoin = useCallback((pin, name) => {
     setError(null)
@@ -97,7 +128,7 @@ export default function App() {
     }
   }, [send, player])
 
-  // Render 
+  // Render
   if (player && gameState === 'in_game') {
     return (
       <ControllerPage
