@@ -87,19 +87,22 @@ async def game_tick_loop() -> None:
                 payload = _serialize_state(cpp_state)
 
                 await connection_manager.broadcast_to_host(room, payload)
+                
+                # Broadcast to all players in the room they use it to update their local game state
+                await connection_manager.broadcast_to_players(room, payload)
+
                 for player in room.players.values():
                     if player.websocket:
                         await connection_manager.send(player.websocket, payload)
 
                 if cpp_state.game_over:
                     room.state = RoomState.FINISHED
-                    await connection_manager.broadcast_to_room(
-                        room,
-                        {
-                            "type": "GAME_OVER",
-                            "room_pin": room.pin
-                        }
-                    )
-                    logger.info(f"[tick] Game Over - room {room.pin}")
+                    game_over_payload = {
+                        "type":     "GAME_OVER",
+                        "room_pin": room.pin,
+                    }
+                    await connection_manager.broadcast_to_room(room, game_over_payload)
+                    logger.info(f"[tick] Game over in room {room.pin}")
+                    
             except Exception as exc:
                 logger.error(f"[tick] Error in room {room.pin}: {exc}", exc_info=True)

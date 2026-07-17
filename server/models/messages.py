@@ -66,3 +66,11 @@ class GameStatePayload(BaseModel):
     tick: int
     players: list[dict]  # Replace with actual player state structure
     obstacles: list[dict] # Replace with actual obstacle structure
+
+class GameStartedPayload(BaseModel):
+    type: Literal["GAME_STARTED"] = "GAME_STARTED"
+    room_pin: str
+
+class GameOverPayload(BaseModel):
+    type: Literal["GAME_OVER"] = "GAME_OVER"
+    room_pin: str
