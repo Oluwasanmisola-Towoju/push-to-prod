@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useWebSocket, ConnectionStatus } from './hooks/useWebSocket.js'
 import { buildInputPayload } from './utils/inputNormalizer.js'
+import { useSound } from './hooks/useSound.js'
 import JoinPage from './components/JoinPage.jsx'
 import ControllerPage from './components/ControllerPage.jsx'
 
@@ -23,13 +24,19 @@ export default function App() {
   const [error, setError] = useState(null)
   const [pendingJoin, setPendingJoin] = useState(null)
   const [playerStatus, setPlayerStatus] = useState({ isAlive: true, score: 0 })
+
   const playerRef = useRef(null)
-  const gameOverTimerRef = useRef(null)
+  const wasAliveRef = useRef(true)
+  const prevScoreRef = useRef(0)
+  const soundEnabled = useRef(true)
+
+  const { playMove, playScore, playDeath, playGameOver, playJoin } = useSound(soundEnabled.current)
 
   const handleMessage = useCallback((payload) => {
     setError(null)
 
     switch (payload.type) {
+
       case 'JOIN_ACK': {
         const session = {
           playerId: payload.player_id,
@@ -40,33 +47,44 @@ export default function App() {
         playerRef.current = session
         saveSession(session)
         setPendingJoin(null)
-        setPlayerStatus({ isAlive: true, score: 0 })
+        playJoin()
         break
       }
 
       case 'GAME_STARTED':
         setGameState('in_game')
         setPlayerStatus({ isAlive: true, score: 0 })
+        wasAliveRef.current = true
+        prevScoreRef.current = 0
         break
 
       case 'GAME_STATE': {
-        const currentPlayer = payload.players?.find(
-          (entry) => entry.player_id === playerRef.current?.playerId,
+        const me = payload.players?.find(
+          (p) => p.player_id === playerRef.current?.playerId
         )
-        if (currentPlayer) {
-          setPlayerStatus({
-            isAlive: currentPlayer.is_alive,
-            score: currentPlayer.score,
-          })
+        if (me) {
+          // detect death transition
+          if (wasAliveRef.current && !me.is_alive) {
+            playDeath()
+          }
+          // detect score increase
+          if (me.score > prevScoreRef.current) {
+            playScore()
+          }
+          wasAliveRef.current  = me.is_alive
+          prevScoreRef.current = me.score
+          setPlayerStatus({ isAlive: me.is_alive, score: me.score })
         }
         break
       }
 
       case 'GAME_OVER':
-        clearTimeout(gameOverTimerRef.current)
-        gameOverTimerRef.current = setTimeout(() => {
+        playGameOver()
+        setTimeout(() => {
           setGameState('lobby')
           setPlayerStatus({ isAlive: true, score: 0 })
+          wasAliveRef.current  = true
+          prevScoreRef.current = 0
         }, 4000)
         break
 
@@ -74,9 +92,7 @@ export default function App() {
         setGameState('lobby')
         setPlayer(null)
         playerRef.current = null
-        setPlayerStatus(null)
         clearSession()
-        setPendingJoin(null)
         setError('The host ended the game.')
         break
 
@@ -84,19 +100,12 @@ export default function App() {
         setError(payload.message)
         break
 
-      case 'PONG':
-        break
-
       default:
         break
     }
-  }, [])
+  }, [playJoin, playDeath, playScore, playGameOver])
 
-  const { send, status } = useWebSocket('/ws/player', handleMessage)
-
-  useEffect(() => () => {
-    clearTimeout(gameOverTimerRef.current)
-  }, [])
+  const { send, status } = useWebSocket(handleMessage)
 
   // On reconnect: silently re-join the game with already stored player_id
   useEffect(() => {
@@ -104,14 +113,14 @@ export default function App() {
     const session = loadSession()
     if (session && !player) {
       send({
-        type: 'JOIN_ROOM',
-        room_pin: session.roomPin,
+        type:        'JOIN_ROOM',
+        room_pin:    session.roomPin,
         player_name: session.playerName,
-        player_id: session.playerId,
+        player_id:   session.playerId,
       })
     }
     if (pendingJoin) send(pendingJoin)
-  }, [status, player, pendingJoin, send])
+  }, [status]) // eslint-disable-line
 
   const handleJoin = useCallback((pin, name) => {
     setError(null)
@@ -121,12 +130,9 @@ export default function App() {
 
   const handleAction = useCallback((action) => {
     if (!player) return
-    const payload = buildInputPayload(player.playerId, action)
-    const ok = send(payload)
-    if (!ok) {
-      console.warn('[Frontend] WebSocket not open, action dropped', action, payload)
-    }
-  }, [send, player])
+    playMove()
+    send(buildInputPayload(player.playerId, action))
+  }, [send, player, playMove])
 
   // Render
   if (player && gameState === 'in_game') {
