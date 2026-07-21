@@ -111,12 +111,12 @@ for i in $(seq 1 20); do
     fi
 done
 
-cd "$ROOT/client"
+cd "$ROOT/frontend/client"
 npm install --silent
 npm run dev &
 cd "$ROOT"
 
-cd "$ROOT/host"
+cd "$ROOT/frontend/host"
 npm install --silent
 npm run dev &
 cd "$ROOT"

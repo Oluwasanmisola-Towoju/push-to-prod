@@ -71,7 +71,7 @@ export default function App() {
           if (me.score > prevScoreRef.current) {
             playScore()
           }
-          wasAliveRef.current  = me.is_alive
+          wasAliveRef.current = me.is_alive
           prevScoreRef.current = me.score
           setPlayerStatus({ isAlive: me.is_alive, score: me.score })
         }
@@ -83,7 +83,7 @@ export default function App() {
         setTimeout(() => {
           setGameState('lobby')
           setPlayerStatus({ isAlive: true, score: 0 })
-          wasAliveRef.current  = true
+          wasAliveRef.current = true
           prevScoreRef.current = 0
         }, 4000)
         break
@@ -105,7 +105,7 @@ export default function App() {
     }
   }, [playJoin, playDeath, playScore, playGameOver])
 
-  const { send, status } = useWebSocket(handleMessage)
+  const { send, status } = useWebSocket('/ws/player', handleMessage)
 
   // On reconnect: silently re-join the game with already stored player_id
   useEffect(() => {
@@ -113,10 +113,10 @@ export default function App() {
     const session = loadSession()
     if (session && !player) {
       send({
-        type:        'JOIN_ROOM',
-        room_pin:    session.roomPin,
+        type: 'JOIN_ROOM',
+        room_pin: session.roomPin,
         player_name: session.playerName,
-        player_id:   session.playerId,
+        player_id: session.playerId,
       })
     }
     if (pendingJoin) send(pendingJoin)
