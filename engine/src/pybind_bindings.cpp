@@ -19,7 +19,8 @@ PYBIND11_MODULE(gameengine, m) {
         .value("BUG", ObstacleType::BUG)
         .value("MERGE_CONFLICT", ObstacleType::MERGE_CONFLICT)
         .value("SCOPE_CREEP", ObstacleType::SCOPE_CREEP)
-        .value("SLACK_NOTIFICATION", ObstacleType::SLACK_NOTIFICATION);
+        .value("SLACK_NOTIFICATION", ObstacleType::SLACK_NOTIFICATION)
+        .value("ESPRESSO_SHOT", ObstacleType::ESPRESSO_SHOT);
 
     py::class_<Player>(m, "Player")
         .def_readonly("id",    &Player::id)
@@ -27,7 +28,9 @@ PYBIND11_MODULE(gameengine, m) {
         .def_readonly("x",     &Player::x)
         .def_readonly("y",     &Player::y)
         .def_readonly("score", &Player::score)
-        .def_readonly("state", &Player::state);
+        .def_readonly("state", &Player::state)
+        .def_readonly("stamina", &Player::stamina)
+        .def_readonly("invulnerable_timer", &Player::invulnerableTimer);
 
     py::class_<AABB>(m, "AABB")
         .def_readonly("x", &AABB::x).def_readonly("y", &AABB::y)
@@ -47,8 +50,9 @@ PYBIND11_MODULE(gameengine, m) {
         .def_readonly("game_over", &GameState::gameOver);
 
     py::class_<GameEngine>(m, "GameEngine")
-        .def(py::init<int, int>(),
-             py::arg("lane_count") = 10, py::arg("grid_width") = 12)
+        .def(py::init<int, int, unsigned>(),
+             py::arg("lane_count") = 10, py::arg("grid_width") = 12,
+             py::arg("seed") = 0xC0FFEE)
         .def("add_player",    &GameEngine::addPlayer)
         .def("remove_player", &GameEngine::removePlayer)
         

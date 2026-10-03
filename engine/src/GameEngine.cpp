@@ -1,6 +1,5 @@
 #include "GameEngine.h"
 #include <algorithm>
-#include <cstdlib>
 #include <cmath>
 #include <sstream>
 #include <iomanip>
@@ -10,11 +9,17 @@ namespace ptp {
     static constexpr float PLAYER_H = 0.8f;
     static constexpr float OBSTACLE_H = 0.9f;
     static constexpr float MOVE_STEP = 1.0f;
+    static constexpr float MAX_DT = 0.1f;
+    static constexpr int HAZARD_TYPE_COUNT = 4;
 
-    GameEngine::GameEngine(int laneCount, int gridWidth)
+    GameEngine::GameEngine(int laneCount, int gridWidth, unsigned seed)
         : _laneCount(laneCount), _gridWidth(gridWidth)
-        , _tickCount(0), _spawnTimer(0.0f), _spawnInterval(1.2f)
-    {}
+        , _tickCount(0), _rng(seed), _spawnTimer(0.0f), _spawnInterval(1.2f)
+        , _elapsed(0.0f), _nextEspressoAt(0.0f)
+    {
+        _nextEspressoAt = 4.0f + static_cast<float>(
+            std::uniform_int_distribution<int>(0, 5)(_rng));
+    }
 
     bool GameEngine::addPlayer(const std::string& id, const std::string& name) {
         if (_players.count(id)) return false;
@@ -57,13 +62,34 @@ namespace ptp {
     }
 
     GameState GameEngine::tick(float dt) {
+        dt = std::min(dt, MAX_DT);
         _spawnTimer += dt;
+        _elapsed += dt;
 
         // spawn intervals get faster over time, hopefully would make someone crash out lol
         if (_spawnTimer >= _spawnInterval) {
             _spawnTimer = 0.0f;
             _spawnObstacle();
             _spawnInterval =std::max(0.4f, _spawnInterval - 0.005f);  // dynamic difficulty
+        }
+
+        if (_elapsed >= _nextEspressoAt) {
+            const int seq = _nextObstacleId++;
+            std::uniform_int_distribution<int> laneDistribution(1, _laneCount - 1);
+            const float speed = std::uniform_int_distribution<int>(0, 1)(_rng) == 0
+                ? -2.0f : 2.0f;
+            const float startX = (speed > 0) ? -1.5f : static_cast<float>(_gridWidth) + 1.5f;
+            const int lane = laneDistribution(_rng);
+            std::ostringstream ss;
+            ss << "obs_" << std::setw(5) << std::setfill('0') << seq;
+            _obstacles.emplace_back(ss.str(), ObstacleType::ESPRESSO_SHOT,
+                                    lane, startX, static_cast<float>(lane),
+                                    0.8f, OBSTACLE_H, speed);
+            _nextEspressoAt = _elapsed + 20.0f;
+        }
+
+        for (auto& [id, p] : _players) {
+            p.invulnerableTimer = std::max(0.0f, p.invulnerableTimer - dt);
         }
 
         // sequential physics processing
@@ -83,18 +109,22 @@ namespace ptp {
     }
 
     void GameEngine::_spawnObstacle() {
+        const int seq = _nextObstacleId++;
         std::ostringstream ss;
-        ss << "obs_" << std::setw(5) << std::setfill('0') << _nextObstacleId++;
-        int    lane = 1 + rand() % (_laneCount - 1);
-        float  speed = 3.0f + (float)(rand() % 40) / 10.0f;
+        ss << "obs_" << std::setw(5) << std::setfill('0') << seq;
+        std::uniform_int_distribution<int> laneDistribution(1, _laneCount - 1);
+        std::uniform_int_distribution<int> speedDistribution(30, 69);
+        int    lane = laneDistribution(_rng);
+        float  speed = static_cast<float>(speedDistribution(_rng)) / 10.0f;
 
         // set upa 50% chance of spawn moving left to right or right to left 
-        if (rand() % 2 == 0) speed = -speed;
+        if (std::uniform_int_distribution<int>(0, 1)(_rng) == 0) speed = -speed;
 
         float startX = (speed > 0) ? -1.5f : (float)_gridWidth + 1.5f;
-        float w      = 1.0f + (float)(rand() % 3) * 0.5f;
+        float w      = 1.0f + static_cast<float>(
+            std::uniform_int_distribution<int>(0, 2)(_rng)) * 0.5f;
 
-        auto type    = static_cast<ObstacleType>(_nextObstacleId % 4);
+        auto type    = static_cast<ObstacleType>(seq % HAZARD_TYPE_COUNT);
 
         _obstacles.emplace_back(ss.str(), type, lane, startX, (float)lane, w, OBSTACLE_H, speed);
     }
@@ -110,8 +140,18 @@ namespace ptp {
 
             AABB pa = _playerAABB(p);
 
+            for (auto& o : _obstacles) {
+                if (o.type == ObstacleType::ESPRESSO_SHOT && !o.consumed
+                    && pa.intersects(o.bounds)) {
+                    o.consumed = true;
+                    p.stamina += 50;
+                    p.invulnerableTimer = 10.0f;
+                }
+            }
+
             for (auto& o : _obstacles)
-                if (pa.intersects(o.bounds)) {
+                if (o.type != ObstacleType::ESPRESSO_SHOT && !o.consumed
+                    && pa.intersects(o.bounds) && p.invulnerableTimer <= 0.0f) {
                     p.state = PlayerState::DEAD;
                     break;
                 }
@@ -125,7 +165,7 @@ namespace ptp {
         _obstacles.erase(
             std::remove_if(_obstacles.begin(), _obstacles.end(),
                 [&](const Obstacle& o){
-                    return o.bounds.x > lim || o.bounds.x < -3.0f;
+                    return o.consumed || o.bounds.x > lim || o.bounds.x < -3.0f;
                 }),
             _obstacles.end()
         );

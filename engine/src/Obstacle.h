@@ -5,7 +5,7 @@ namespace ptp {
 
     // ceated obstacles that matches game theme at leaast i tried, lol)
     enum class ObstacleType {
-        BUG, MERGE_CONFLICT, SCOPE_CREEP, SLACK_NOTIFICATION
+        BUG, MERGE_CONFLICT, SCOPE_CREEP, SLACK_NOTIFICATION, ESPRESSO_SHOT
     };
 
     // the invisible collision box mathematicay wrapped around game entities
@@ -26,6 +26,7 @@ namespace ptp {
         AABB         bounds;     // The active hit-box for collision detection
         float        velocityX;  // The speed at which it sweeps across the screen
         int          lane;       // Grid row identifier for spawned obstacles
+        bool         consumed = false;
 
         Obstacle(std::string id, ObstacleType type, int lane,
                 float startX, float y, float w, float h, float vx)

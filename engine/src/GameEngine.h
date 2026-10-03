@@ -2,6 +2,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <random>
 
 // import both Player and Obstacle definition
 #include "Player.h"  
@@ -20,7 +21,8 @@ namespace ptp {
     class GameEngine {
         public:
             // explicit prevents accidental implicit type conversions
-            explicit GameEngine(int laneCount = 10, int gridWidth = 12);
+            explicit GameEngine(int laneCount = 10, int gridWidth = 12,
+                                unsigned seed = 0xC0FFEE);
 
             // public API method exposed to python
             bool addPlayer    (const std::string& playerId, const std::string& name);
@@ -35,7 +37,8 @@ namespace ptp {
         
         private: 
             int   _laneCount, _gridWidth, _tickCount;
-            float _spawnTimer, _spawnInterval;
+            std::mt19937 _rng;
+            float _spawnTimer, _spawnInterval, _elapsed, _nextEspressoAt;
             int   _nextObstacleId = 0;
 
             // the master state held in server RAM
@@ -48,5 +51,7 @@ namespace ptp {
             void _checkCollisions();  // uses the AABB::intersects() logic
             void _cullObstacles();    // deletes obstacles that have moved off screen to free memory
             AABB _playerAABB(const Player& p) const;   // helper function to generate hitbox for a specific player
+
+            friend struct EngineTestAccess;
     };
 }
