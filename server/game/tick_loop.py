@@ -14,23 +14,38 @@ TICK_INTERVAL = 1.0 / TICK_RATE_HZ  # 0.05s at 20HZ
 
 # maps C++ PlayerState enum int values into Python booleans
 _DEAD_STATE = 1
+_OBSTACLE_NAMES = {
+    0: "BUG",
+    1: "MERGE_CONFLICT",
+    2: "SCOPE_CREEP",
+    3: "SLACK_NOTIFICATION",
+    4: "ESPRESSO_SHOT",
+}
 
-def _serialize_state(cpp_state) -> dict:
+
+def _serialise_state(cpp_state) -> dict:
+    cpp_players = cpp_state.players
+    cpp_obstacles = cpp_state.obstacles
+
     players = []
-    for p in cpp_state.players:
+    for p in cpp_players:
         players.append({
             "player_id":   p.id,
             "player_name": p.name,
             "x":           round(float(p.x), 3),
             "y":           round(float(p.y), 3),
             "score":       int(p.score),
-            "is_alive":    int(p.state) != _DEAD_STATE
+            "is_alive":    int(p.state) != _DEAD_STATE,
+            "stamina":     int(p.stamina),
+            "is_invulnerable": float(p.invulnerable_timer) > 0.0,
+            "invulnerable_for": round(max(0.0, float(p.invulnerable_timer)), 3),
         })
 
     obstacles = []
-    for o in cpp_state.obstacles:
+    for o in cpp_obstacles:
         obstacles.append({
             "id":   o.id,
+            "type": _OBSTACLE_NAMES.get(int(o.type), "UNKNOWN"),
             "x":    round(float(o.bounds.x), 3),
             "y":    round(float(o.bounds.y), 3),
             "w":    round(float(o.bounds.w), 3),
@@ -47,9 +62,14 @@ def _serialize_state(cpp_state) -> dict:
         "game_over": bool(cpp_state.game_over)
     }
 
+
+_serialize_state = _serialise_state
+
+
 def _sync_python_state(room, cpp_state) -> None:
     """Mirror C++ positions and scores back into Python Player Objects"""
-    for cp in cpp_state.players:
+    cpp_players = cpp_state.players
+    for cp in cpp_players:
         py_player = room.players.get(cp.id)
         if py_player:
             py_player.x        = float(cp.x)
@@ -84,7 +104,7 @@ async def game_tick_loop() -> None:
             try:
                 cpp_state = room.engine.tick(delta_time)
                 _sync_python_state(room, cpp_state)
-                payload = _serialize_state(cpp_state)
+                payload = _serialise_state(cpp_state)
 
                 await connection_manager.broadcast_to_host(room, payload)
                 

@@ -61,11 +61,36 @@ class ErrorPayload(BaseModel):
 class PongPayload(BaseModel):
     type: Literal["PONG"] = "PONG"
 
+
+class PlayerSnapshot(BaseModel):
+    player_id: str
+    player_name: str
+    x: float
+    y: float
+    score: int
+    is_alive: bool
+    stamina: int = 100
+    is_invulnerable: bool = False
+    invulnerable_for: float = 0.0
+
+
+class ObstacleSnapshot(BaseModel):
+    id: str
+    type: str
+    x: float
+    y: float
+    w: float
+    h: float
+    vx: float
+    lane: int
+
+
 class GameStatePayload(BaseModel):
     type: Literal["GAME_STATE"] = "GAME_STATE"
     tick: int
-    players: list[dict]  # Replace with actual player state structure
-    obstacles: list[dict] # Replace with actual obstacle structure
+    players: list[PlayerSnapshot]
+    obstacles: list[ObstacleSnapshot]
+    game_over: bool = False
 
 class GameStartedPayload(BaseModel):
     type: Literal["GAME_STARTED"] = "GAME_STARTED"

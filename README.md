@@ -107,7 +107,7 @@ All frames are flat JSON objects with a `type` discriminator. There is no nested
 | server to host | `PLAYER_JOINED` / `PLAYER_LEFT` | `player_id`, `player_name`, `player_count` | Existing players also get `PLAYER_JOINED`; `PLAYER_LEFT` goes to the host only |
 | server to player | `JOIN_ACK` | `player_id`, `room_pin`, `player_name` | Always the joiner's first message |
 | server to both | `GAME_STARTED` | `room_pin` | |
-| server to host | `GAME_STATE` | see below | 20 Hz |
+| server to host | `GAME_STATE` | `tick`, `players`, `obstacles`, `game_over` | 20 Hz; player and obstacle snapshots are typed (P12) |
 | server to both | `GAME_OVER` | `room_pin` | After the final `GAME_STATE` |
 | server to player | `HOST_DISCONNECTED` | `message` | |
 | server to either | `ERROR` | `code`, `message` | `INVALID_JSON`, `ROOM_NOT_FOUND`, `ROOM_FULL`, `NAME_REQUIRED`, `NO_ROOM` |
@@ -120,11 +120,12 @@ All frames are flat JSON objects with a `type` discriminator. There is no nested
   "tick": 1042,
   "players": [
     { "player_id": "8d2b0a49-99b4-435c-bcb1-3b407a29be04", "player_name": "sapa",
-      "x": 6.0, "y": 3.0, "score": 2, "is_alive": true }
+      "x": 6.0, "y": 3.0, "score": 2, "is_alive": true,
+      "stamina": 150, "is_invulnerable": true, "invulnerable_for": 9.95 }
   ],
   "obstacles": [
-    { "id": "obs_00017", "type": "BUG", "x": 4.213, "y": 3.0,
-      "w": 1.5, "h": 0.9, "vx": -4.2, "lane": 3 }
+    { "id": "obs_00017", "type": "ESPRESSO_SHOT", "x": 4.213, "y": 3.0,
+      "w": 0.8, "h": 0.9, "vx": -2.0, "lane": 3 }
   ],
   "game_over": false
 }

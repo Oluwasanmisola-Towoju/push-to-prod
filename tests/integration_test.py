@@ -227,6 +227,53 @@ async def test_input_moves_player():
                    f"start_y={start_y}" if not moved else "")
 
 
+async def test_espresso_shot_state():
+    print("\nTest 10 — GAME_STATE includes typed obstacles and Espresso Shot")
+    known_types = {
+        "BUG", "MERGE_CONFLICT", "SCOPE_CREEP", "SLACK_NOTIFICATION", "ESPRESSO_SHOT"
+    }
+    async with websockets.connect(f"{BASE}/ws/host") as host:
+        await host.send(json.dumps({"type": "CREATE_ROOM"}))
+        pin = (await recv(host))["room_pin"]
+        async with websockets.connect(f"{BASE}/ws/player") as player:
+            await player.send(json.dumps({
+                "type": "JOIN_ROOM", "room_pin": pin, "player_name": "Espresso"
+            }))
+            await recv(player)
+            await recv(host)
+            await host.send(json.dumps({"type": "START_GAME", "room_pin": pin}))
+            await recv(host)
+            await recv(player)
+
+            saw_espresso = False
+            valid_snapshots = True
+            saw_player = False
+            deadline = asyncio.get_event_loop().time() + 12.0
+            while asyncio.get_event_loop().time() < deadline and not saw_espresso:
+                remaining = deadline - asyncio.get_event_loop().time()
+                try:
+                    state = await recv_type(host, "GAME_STATE", timeout=remaining)
+                except asyncio.TimeoutError:
+                    break
+                for obstacle in state.get("obstacles", []):
+                    valid_snapshots = valid_snapshots and (
+                        isinstance(obstacle.get("type"), str)
+                        and obstacle["type"] in known_types
+                    )
+                    saw_espresso = saw_espresso or obstacle["type"] == "ESPRESSO_SHOT"
+                for snapshot in state.get("players", []):
+                    saw_player = True
+                    valid_snapshots = valid_snapshots and (
+                        isinstance(snapshot.get("stamina"), int)
+                        and isinstance(snapshot.get("is_invulnerable"), bool)
+                        and isinstance(snapshot.get("invulnerable_for"), float)
+                    )
+
+            record("GAME_STATE obstacle types are named", valid_snapshots)
+            record("GAME_STATE includes player stamina fields", valid_snapshots and saw_player)
+            record("ESPRESSO_SHOT appears within 12 seconds", saw_espresso)
+
+
 async def run_all():
     # Phase 1
     await test_room_creation()
@@ -239,6 +286,7 @@ async def run_all():
     # Phase 2-4
     await test_game_state_reaches_player()
     await test_input_moves_player()
+    await test_espresso_shot_state()
 
 
 def start_server():
