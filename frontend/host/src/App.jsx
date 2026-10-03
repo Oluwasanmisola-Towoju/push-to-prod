@@ -1,13 +1,23 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useHostSocket } from './hooks/useHostSocket.js'
 import LobbyPage from './pages/LobbyPage.jsx'
 import GamePage from './pages/GamePage.jsx'
+import { makeMockState } from './dev/mockState.js'
 
 export default function App() {
   const [pin, setPin] = useState(null)
   const [players, setPlayers] = useState([])
   const [page, setPage] = useState('lobby')
   const gameStateRef = useRef(null)
+
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has('mock')) return undefined
+    let tick = 0
+    const timer = window.setInterval(() => {
+      gameStateRef.current = makeMockState(tick++)
+    }, 50)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const handleMessage = useCallback((payload) => {
     switch (payload.type) {
